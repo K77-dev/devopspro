@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: postgres
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - image: postgres:alpine
+        name: postgres
+        env:
+        - name: POSTGRES_DB
+          value: kube-news
+        - name: POSTGRES_USER
+          value: root
+        - name: POSTGRES_PASSWORD
+          value: root
+        ports:
+        - containerPort: 5432
+        resources: {}
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: postgres
+  name: postgres
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: postgres
+  type: ClusterIP
+---
+apiVersion: v1
+data:
+  DB_DATABASE: a3ViZS1uZXdz
+  DB_HOST: cG9zdGdyZXM=
+  DB_PASSWORD: cm9vdA==
+  DB_USERNAME: cm9vdA==
+kind: Secret
+metadata:
+  name: app-secret
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: app-kube-news
+  name: app-kube-news
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: app-kube-news
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: app-kube-news
+    spec:
+      containers:
+      - image: kelsenbrito/kube-news
+        name: kube-news
+        # env: 
+        # - name: DB_DATABASE
+        #   value: kube-news
+        # - name: DB_USERNAME
+        #   value: root
+        # - name: DB_PASSWORD
+        #   value: root
+        # - name: DB_HOST
+        #   value: postgres
+        envFrom:
+        -  secretRef: 
+             name: app-secret
+        ports:
+        - containerPort: 8080
+        resources: {}
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-news
+spec:
+  selector:
+    app: app-kube-news
+  ports:
+  - port: 80
+    targetPort: 8080
+    nodePort: 30000
+  type: NodePort
